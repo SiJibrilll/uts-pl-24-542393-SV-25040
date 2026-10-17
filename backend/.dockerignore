@@ -1,0 +1,17 @@
+node_modules
+*/node_modules
+vendor
+.git
+.gitignore
+.gitattributes
+.env
+.env.*
+!.env.example
+tests
+.phpunit.cache
+.phpunit.result.cache
+Dockerfile*
+.dockerignore
+*.md
+storage/logs/*.log
+bootstrap/cache/*.php
