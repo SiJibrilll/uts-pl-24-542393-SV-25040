@@ -1,0 +1,72 @@
+services:
+  # Service 1: Basis Data Relasional PostgreSQL (Soal 6a)
+  database:
+    image: postgres:15-alpine
+    container_name: uts-database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-uts_bookstore}
+      POSTGRES_USER: ${DB_USERNAME:-uts_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-uts_secret_pass}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - uts-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-uts_user} -d ${DB_DATABASE:-uts_bookstore}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service 2: Backend Laravel ditenagai FrankenPHP Server (Soal 6a, 5a, & 7 Bonus +10)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: uts-backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      APP_NAME: "UTS Bookstore API"
+      APP_ENV: production
+      APP_DEBUG: "true"
+      APP_KEY: ${APP_KEY}
+      APP_URL: http://localhost:${BACKEND_PORT:-8000}
+      DB_CONNECTION: pgsql
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-uts_bookstore}
+      DB_USERNAME: ${DB_USERNAME:-uts_user}
+      DB_PASSWORD: ${DB_PASSWORD:-uts_secret_pass}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - uts-network
+
+  # Service 3: Frontend Vue 3 Multi-Stage Nginx (Soal 6a & 5b)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: uts-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks:
+      - uts-network
+
+# Named Volume untuk Persistensi Data (Soal 6d)
+volumes:
+  db_data:
+    driver: local
+
+# Jaringan Terisolasi Docker Compose (Soal 6b)
+networks:
+  uts-network:
+    driver: bridge
