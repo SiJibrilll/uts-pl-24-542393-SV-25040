@@ -1,0 +1,417 @@
+{
+	"info": {
+		"_postman_id": "7f8b9a10-4c32-4e56-8a90-123456789abc",
+		"name": "UTS KEPL - Bookstore RESTful API",
+		"description": "Postman Collection resmi untuk pengujian API Ujian Tengah Semester (UTS) Konstruksi dan Evolusi Perangkat Lunak 2026/2027 atas nama Jibrilian Wulsa Ariswanto (NIM: 24/542393/SV/25040).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Login (Dapatkan Token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (pm.response.code === 200 && jsonData.access_token) {",
+									"    pm.collectionVariables.set('auth_token', jsonData.access_token);",
+									"    console.log('Token berhasil disimpan ke variabel koleksi: ' + jsonData.access_token);",
+									"}",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response contains access_token', function () {",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@bookstore.test\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile (Cek User Terautentikasi)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/user",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout (Cabut Token)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Books Resource CRUD",
+			"item": [
+				{
+					"name": "Tampil Semua Buku (Index)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/books",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tambah Buku Baru (Store - 201 Created)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Cloud Native Go: Building Reliable Services in Unreliable Environments\",\n    \"author\": \"Matthew A. Titmus\",\n    \"isbn\": \"978-1492076339\",\n    \"published_year\": 2021,\n    \"price\": 225000.00,\n    \"stock\": 18,\n    \"description\": \"Panduan membangun aplikasi backend cloud-native resilien dengan Docker dan Kubernetes.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/books",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tampil Satu Buku (Show)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/books/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"books",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ubah Data Buku (Update - 200 OK)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Clean Code: Edisi Revisi Bahasa Indonesia\",\n    \"author\": \"Robert C. Martin\",\n    \"isbn\": \"978-0132350884\",\n    \"published_year\": 2008,\n    \"price\": 185000.00,\n    \"stock\": 35,\n    \"description\": \"Edisi diperbarui dengan studi kasus arsitektur refactoring modern.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/books/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"books",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Hapus Buku (Delete - 200 OK)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/books/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"books",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Error Cases (Validasi & Unauthenticated)",
+			"item": [
+				{
+					"name": "Validasi Gagal (422 Unprocessable Content)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Buku Tanpa Field Wajib Lainnya\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/books",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tanpa Token (401 Unauthorized)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/books",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
