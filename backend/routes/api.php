@@ -2,16 +2,18 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookController;
+use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-| Seluruh endpoint selain /login wajib menggunakan token Sanctum.
+| Seluruh endpoint selain /login dan /health wajib menggunakan token Sanctum.
 */
 
-// Endpoint Otentikasi Publik
+// Endpoint Publik
+Route::get('/health', [HealthController::class, 'check']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // Endpoint Terproteksi Token (Bearer Token Sanctum)
