@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Book;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class BookController extends Controller
 {
@@ -15,7 +18,22 @@ class BookController extends Controller
      */
     public function index(): JsonResponse
     {
-        $books = Book::orderBy('id', 'desc')->get();
+        try {
+            $books = Book::orderBy('id', 'desc')->get();
+        } catch (QueryException $e) {
+            Log::error('Gagal mengambil daftar buku dari basis data', [
+                'who' => request()->user()?->id ?? 'guest',
+                'action' => 'list_books',
+                'service' => 'database',
+                'reason' => 'Koneksi atau kueri basis data mengalami gangguan saat mengambil katalog',
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data dari basis data.',
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
@@ -30,17 +48,52 @@ class BookController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'author' => ['required', 'string', 'max:255'],
-            'isbn' => ['required', 'string', 'max:50', 'unique:books,isbn'],
-            'published_year' => ['required', 'integer', 'min:1500', 'max:2100'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'stock' => ['required', 'integer', 'min:0'],
-            'description' => ['nullable', 'string'],
-        ]);
+        try {
+            $validated = $request->validate([
+                'title' => ['required', 'string', 'max:255'],
+                'author' => ['required', 'string', 'max:255'],
+                'isbn' => ['required', 'string', 'max:50', 'unique:books,isbn'],
+                'published_year' => ['required', 'integer', 'min:1500', 'max:2100'],
+                'price' => ['required', 'numeric', 'min:0'],
+                'stock' => ['required', 'integer', 'min:0'],
+                'description' => ['nullable', 'string'],
+            ]);
+        } catch (ValidationException $e) {
+            Log::warning('Validasi data buku gagal saat penambahan buku', [
+                'who' => $request->user()?->id ?? 'guest',
+                'action' => 'store_book',
+                'reason' => 'Payload permintaan tidak memenuhi aturan validasi skema data',
+                'failed_fields' => array_keys($e->errors()),
+            ]);
 
-        $book = Book::create($validated);
+            throw $e;
+        }
+
+        try {
+            $book = Book::create($validated);
+        } catch (QueryException $e) {
+            Log::error('Gagal menghubungi basis data saat menyimpan buku', [
+                'who' => $request->user()?->id ?? 'guest',
+                'action' => 'store_book',
+                'service' => 'database',
+                'reason' => 'Koneksi ke host basis data terputus atau terjadi galat kueri',
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem saat menghubungi basis data.',
+            ], 500);
+        }
+
+        Log::info('Buku baru berhasil disimpan ke dalam katalog', [
+            'who' => $request->user()?->id ?? 'system',
+            'action' => 'store_book',
+            'book_id' => $book->id,
+            'title' => $book->title,
+            'isbn' => $book->isbn,
+            'reason' => 'Penambahan koleksi buku baru berhasil diverifikasi dan disimpan ke basis data',
+        ]);
 
         return response()->json([
             'success' => true,
@@ -54,7 +107,23 @@ class BookController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $book = Book::find($id);
+        try {
+            $book = Book::find($id);
+        } catch (QueryException $e) {
+            Log::error('Gagal mengambil detail buku dari basis data', [
+                'who' => request()->user()?->id ?? 'guest',
+                'action' => 'show_book',
+                'book_id' => $id,
+                'service' => 'database',
+                'reason' => 'Koneksi basis data bermasalah saat pencarian buku',
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem saat menghubungi basis data.',
+            ], 500);
+        }
 
         if (! $book) {
             return response()->json([
@@ -83,17 +152,53 @@ class BookController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'author' => ['sometimes', 'required', 'string', 'max:255'],
-            'isbn' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('books')->ignore($book->id)],
-            'published_year' => ['sometimes', 'required', 'integer', 'min:1500', 'max:2100'],
-            'price' => ['sometimes', 'required', 'numeric', 'min:0'],
-            'stock' => ['sometimes', 'required', 'integer', 'min:0'],
-            'description' => ['nullable', 'string'],
-        ]);
+        try {
+            $validated = $request->validate([
+                'title' => ['sometimes', 'required', 'string', 'max:255'],
+                'author' => ['sometimes', 'required', 'string', 'max:255'],
+                'isbn' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('books')->ignore($book->id)],
+                'published_year' => ['sometimes', 'required', 'integer', 'min:1500', 'max:2100'],
+                'price' => ['sometimes', 'required', 'numeric', 'min:0'],
+                'stock' => ['sometimes', 'required', 'integer', 'min:0'],
+                'description' => ['nullable', 'string'],
+            ]);
+        } catch (ValidationException $e) {
+            Log::warning('Validasi data buku gagal saat pembaruan buku', [
+                'who' => $request->user()?->id ?? 'guest',
+                'action' => 'update_book',
+                'book_id' => $book->id,
+                'reason' => 'Atribut pembaruan buku tidak memenuhi aturan validasi',
+                'failed_fields' => array_keys($e->errors()),
+            ]);
 
-        $book->update($validated);
+            throw $e;
+        }
+
+        try {
+            $book->update($validated);
+        } catch (QueryException $e) {
+            Log::error('Gagal memperbarui data buku pada basis data', [
+                'who' => $request->user()?->id ?? 'guest',
+                'action' => 'update_book',
+                'book_id' => $book->id,
+                'service' => 'database',
+                'reason' => 'Galat kueri basis data saat operasi update',
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem saat memperbarui basis data.',
+            ], 500);
+        }
+
+        Log::info('Data buku berhasil diperbarui dalam katalog', [
+            'who' => $request->user()?->id ?? 'system',
+            'action' => 'update_book',
+            'book_id' => $book->id,
+            'title' => $book->title,
+            'reason' => 'Pembaruan data buku berhasil disimpan ke basis data',
+        ]);
 
         return response()->json([
             'success' => true,
@@ -116,7 +221,31 @@ class BookController extends Controller
             ], 404);
         }
 
-        $book->delete();
+        try {
+            $book->delete();
+        } catch (QueryException $e) {
+            Log::error('Gagal menghapus buku dari basis data', [
+                'who' => request()->user()?->id ?? 'guest',
+                'action' => 'delete_book',
+                'book_id' => $id,
+                'service' => 'database',
+                'reason' => 'Galat kueri basis data saat operasi delete',
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem saat menghapus data buku.',
+            ], 500);
+        }
+
+        Log::info('Buku berhasil dihapus dari katalog', [
+            'who' => request()->user()?->id ?? 'system',
+            'action' => 'delete_book',
+            'book_id' => $id,
+            'title' => $book->title,
+            'reason' => 'Penghapusan data buku atas permintaan pengguna terautentikasi',
+        ]);
 
         return response()->json([
             'success' => true,
