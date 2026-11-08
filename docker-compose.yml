@@ -19,8 +19,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Service 2: Backend Laravel ditenagai FrankenPHP Server (Soal 6a, 5a, & 7 Bonus +10)
+  # Service 2: Backend Laravel ditenagai FrankenPHP Server (P10 Logging stdout & Healthcheck)
   backend:
     build:
       context: ./backend
@@ -36,6 +42,8 @@ services:
       APP_DEBUG: "true"
       APP_KEY: ${APP_KEY}
       APP_URL: http://localhost:${BACKEND_PORT:-8000}
+      LOG_CHANNEL: stdout
+      LOG_LEVEL: debug
       DB_CONNECTION: pgsql
       DB_HOST: database
       DB_PORT: 5432
@@ -46,6 +54,17 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     networks:
       - uts-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Service 3: Frontend Vue 3 Multi-Stage Nginx (Soal 6a & 5b)
   frontend:
@@ -60,6 +79,11 @@ services:
       - "${FRONTEND_PORT:-3000}:80"
     networks:
       - uts-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 # Named Volume untuk Persistensi Data (Soal 6d)
 volumes:
