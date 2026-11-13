@@ -26,11 +26,12 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Service 2: Backend Laravel ditenagai FrankenPHP Server (P10 Logging stdout & Healthcheck)
+  # Service 2: Backend Laravel ditenagai FrankenPHP Server (P10 & P11 Metrics)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: uts-kepl-backend:latest
     container_name: uts-backend
     restart: unless-stopped
     depends_on:
@@ -66,11 +67,12 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Service 3: Frontend Vue 3 Multi-Stage Nginx (Soal 6a & 5b)
+  # Service 3: Frontend Vue 3 Multi-Stage Nginx
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    image: uts-kepl-frontend:latest
     container_name: uts-frontend
     restart: unless-stopped
     depends_on:
@@ -85,12 +87,115 @@ services:
         max-size: "10m"
         max-file: "3"
 
-# Named Volume untuk Persistensi Data (Soal 6d)
+  # =========================================================================
+  # LAYANAN PEMANTAU / OBSERVABILITY STACK (P11)
+  # =========================================================================
+
+  # Service 4: Prometheus Server (Metrics Aggregator & Alerting Engine)
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: uts-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - uts-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Service 5: Grafana Server (Visual Metrics Dashboard)
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: uts-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    networks:
+      - uts-network
+    depends_on:
+      - prometheus
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Service 6: cAdvisor (Container Resource Usage & Performance)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: uts-cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "${CADVISOR_PORT:-8080}:8080"
+    networks:
+      - uts-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Service 7: Node Exporter (Hardware and Host OS Metrics)
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: uts-node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    networks:
+      - uts-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Named Volume untuk Persistensi Data (Basis Data, Prometheus, & Grafana)
 volumes:
   db_data:
     driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
 
-# Jaringan Terisolasi Docker Compose (Soal 6b)
+# Jaringan Terisolasi Docker Compose
 networks:
   uts-network:
     driver: bridge

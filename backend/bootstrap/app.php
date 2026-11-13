@@ -13,10 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             Illuminate\Support\Facades\Route::get('/health', [App\Http\Controllers\HealthController::class, 'check']);
+            Illuminate\Support\Facades\Route::get('/metrics', [App\Http\Controllers\MetricsController::class, 'metrics']);
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->append(App\Http\Middleware\PrometheusMetricsMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

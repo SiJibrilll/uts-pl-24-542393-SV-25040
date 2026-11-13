@@ -1,0 +1,12 @@
+groups:
+  - name: bookstore_alerts
+    rules:
+      - alert: ServiceInstanceDown
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Layanan {{ $labels.job }} (instance: {{ $labels.instance }}) tidak dapat dihubungi"
+          description: "Target pemantauan {{ $labels.job }} pada {{ $labels.instance }} berstatus DOWN selama lebih dari 30 detik."
+          action: "TINDAKAN PERTAMA: Segera periksa status kontainer menggunakan perintah 'docker compose ps', analisis catatan log kesalahan via 'docker compose logs {{ $labels.job }}', dan lakukan pemulihan layanan dengan 'docker compose restart {{ $labels.job }}'."
