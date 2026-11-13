@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 
 // Endpoint Publik
 Route::get('/health', [HealthController::class, 'check']);
+Route::get('/metrics', [\App\Http\Controllers\MetricsController::class, 'metrics']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // Endpoint Terproteksi Token (Bearer Token Sanctum)
